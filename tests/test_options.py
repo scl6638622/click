@@ -1180,6 +1180,35 @@ def test_missing_envvar(runner):
     assert "Error: Missing option '--foo'." in result.output
 
 
+def test_missing_envvar_auto_prefix(runner):
+    """The error hint names the variable derived from ``auto_envvar_prefix``."""
+
+    @click.command(context_settings={"auto_envvar_prefix": "MYAPP"})
+    @click.option("--port", required=True, show_envvar=True)
+    def cli(port):
+        pass
+
+    help_output = runner.invoke(cli, ["--help"]).output
+    assert "env var: MYAPP_PORT" in help_output
+
+    result = runner.invoke(cli)
+    assert result.exit_code == 2
+    assert "Error: Missing option '--port' (env var: 'MYAPP_PORT')." in result.output
+
+
+def test_missing_envvar_auto_prefix_disabled(runner):
+    """``allow_from_autoenv=False`` keeps the hint from naming an unused variable."""
+
+    @click.command(context_settings={"auto_envvar_prefix": "MYAPP"})
+    @click.option("--port", required=True, show_envvar=True, allow_from_autoenv=False)
+    def cli(port):
+        pass
+
+    result = runner.invoke(cli)
+    assert result.exit_code == 2
+    assert "Error: Missing option '--port'." in result.output
+
+
 @pytest.mark.parametrize(
     ("envvar", "expected"),
     [
